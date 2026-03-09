@@ -1,8 +1,10 @@
 /**
  * Popup Script — Rush's Video Playback Speed Controller
  *
- * Communicates with content scripts running in all frames of the active tab
- * via chrome.scripting.executeScript with allFrames: true.
+ * Communicates with all frames via chrome.scripting.executeScript.
+ * The injected function is fully self-contained to avoid cross-world
+ * isolation issues (executeScript runs in a separate isolated world
+ * instance from manifest-declared content scripts).
  */
 (function () {
   'use strict';
@@ -53,8 +55,59 @@
   }
 
   /**
-   * Broadcast a message to all frames in the active tab using executeScript.
-   * Uses the window.__vsc__ bridge exposed by the content script.
+   * Self-contained function injected into each frame via executeScript.
+   * Finds all media elements (including shadow DOM) and applies speed changes.
+   * Must not reference any outer-scope variables.
+   * @param {{ action: string, speed?: number }} msg
+   * @returns {{ frameUrl: string, count: number, speed: number }}
+   */
+  function injectedHandler(msg) {
+    // Find all video/audio elements including inside open shadow roots
+    var found = [];
+    document.querySelectorAll('video, audio').forEach(function (el) { found.push(el); });
+
+    // Walk open shadow roots (two levels deep)
+    document.querySelectorAll('*').forEach(function (el) {
+      if (el.shadowRoot) {
+        el.shadowRoot.querySelectorAll('video, audio').forEach(function (m) { found.push(m); });
+        el.shadowRoot.querySelectorAll('*').forEach(function (inner) {
+          if (inner.shadowRoot) {
+            inner.shadowRoot.querySelectorAll('video, audio').forEach(function (m) { found.push(m); });
+          }
+        });
+      }
+    });
+
+    // Same-origin object/embed
+    document.querySelectorAll('object, embed').forEach(function (el) {
+      try {
+        if (el.contentDocument) {
+          el.contentDocument.querySelectorAll('video, audio').forEach(function (m) { found.push(m); });
+        }
+      } catch (_) {}
+    });
+
+    if (msg.action === 'setSpeed' || msg.action === 'rescan') {
+      var rate = Math.min(16.0, Math.max(0.1, msg.speed || 1.0));
+      found.forEach(function (el) {
+        el.playbackRate = rate;
+        el.defaultPlaybackRate = rate;
+      });
+      return { frameUrl: location.href, count: found.length, speed: rate };
+    }
+
+    if (msg.action === 'getSpeed') {
+      var currentRate = found.length > 0 ? found[0].playbackRate : 1.0;
+      return { frameUrl: location.href, count: found.length, speed: currentRate };
+    }
+
+    return { frameUrl: location.href, count: found.length, speed: 1.0 };
+  }
+
+  /**
+   * Broadcast a message to all frames in the active tab.
+   * Also notifies content scripts via sendMessage to keep their
+   * internal currentSpeed in sync (for MutationObserver on new elements).
    * @param {{ action: string, speed?: number }} message
    * @returns {Promise<Array<{ frameId: number, result: object }>>}
    */
@@ -62,11 +115,16 @@
     try {
       const results = await chrome.scripting.executeScript({
         target: { tabId: activeTabId, allFrames: true },
-        func: (msg) => {
-          return window.__vsc__ ? window.__vsc__.handleMessage(msg) : null;
-        },
+        func: injectedHandler,
         args: [message]
       });
+
+      // Notify content scripts to update their internal state
+      // so MutationObserver applies the correct speed to future elements
+      if (message.action === 'setSpeed') {
+        chrome.tabs.sendMessage(activeTabId, message).catch(() => {});
+      }
+
       return results;
     } catch (err) {
       statusEl.textContent = 'Cannot access this page';
@@ -126,13 +184,12 @@
     btnRescan.classList.add('spinning');
     setTimeout(() => btnRescan.classList.remove('spinning'), 500);
 
-    const results = await broadcastToAllFrames({ action: 'rescan' });
+    const results = await broadcastToAllFrames({ action: 'rescan', speed: currentSpeed });
     updateStatus(results);
 
     // Re-query speed from frames
     const speedResults = await broadcastToAllFrames({ action: 'getSpeed' });
     if (speedResults && speedResults.length > 0) {
-      // Use the speed from the first frame that reports one
       for (const r of speedResults) {
         if (r.result && r.result.speed) {
           currentSpeed = r.result.speed;
