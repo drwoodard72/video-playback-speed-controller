@@ -6,13 +6,43 @@
 </head>
 <body>
   <div id="container">
+    <div id="quick-presets"></div>
     <div id="controls">
       <button id="btn-decrease">&minus;</button>
       <button id="btn-speed" title="Click to reset to 100%">100%</button>
       <button id="btn-increase">+</button>
     </div>
     <button id="btn-rescan">&#x27F3; Rescan</button>
-    <div id="status"></div>
+    <div id="status-row">
+      <span id="status"></span>
+      <button id="btn-config" title="Configuration">&#x2699;</button>
+    </div>
+    <div id="config-panel" class="hidden">
+      <div id="config-modes">
+        <label class="radio-row">
+          <input type="radio" name="mode" value="percentage">
+          <span>Percentage</span>
+          <span id="pct-step-controls">
+            <button id="pct-step-dec" class="small-btn">&minus;</button>
+            <input type="number" id="pct-step-value" value="10" min="1" max="100">
+            <span class="pct-label">%</span>
+            <button id="pct-step-inc" class="small-btn">+</button>
+          </span>
+        </label>
+        <label class="radio-row">
+          <input type="radio" name="mode" value="presets">
+          <span>Presets</span>
+        </label>
+      </div>
+      <div id="preset-editor">
+        <div id="preset-list"></div>
+        <div id="preset-actions">
+          <button id="btn-preset-insert" class="action-btn">Insert</button>
+          <button id="btn-preset-sort" class="action-btn">Sort</button>
+          <button id="btn-preset-reset" class="action-btn">Reset</button>
+        </div>
+      </div>
+    </div>
   </div>
   <script src="popup.js"></script>
 </body>
