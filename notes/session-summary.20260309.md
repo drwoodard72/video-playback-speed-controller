@@ -25,37 +25,31 @@ Initialized **Rush's Video Playback Speed Controller** — a Chromium Manifest V
 
 4. **93a69f2** — Added refined configuration panel spec
 
-## Uncommitted Changes (end of session)
+5. **13d4fa1** — Add configuration panel, quick-access bar, and packaging script
+   - Config panel with gear toggle: percentage mode and presets mode
+   - Preset editor with per-row quick-access checkbox, value editing, reorder, delete
+   - Quick-access bar: 1–7 dynamic buttons from checked presets
+   - Preset data model changed from flat `number[]` to `{ speed: number, quick: boolean }[]` with legacy migration
+   - `package.sh` for building distributable zip (supports zip and 7z)
+   - `notes/` directory for project notes (excluded from packaged extension)
 
-### Configuration panel
-- Gear button in the status row (right-aligned) toggles a config sub-panel below
-- Two increment/decrement modes via radio buttons:
-  - **Percentage**: absolute step addition/subtraction (default 10%, adjustable 1–100%)
-  - **Presets**: snap to next/previous preset value (default mode)
+6. **6b256df** — Update package.sh to support 7z as fallback for zip
 
-### Preset editor
-- Each preset row: quick-access checkbox, editable value field, up/down reorder buttons, delete button
-- 100% preset is undeletable but movable; its quick-access checkbox is always checked
-- Three action buttons: Insert, Sort (numeric), Reset (restore defaults)
-- Validation: no duplicates, values clamped to 10%–1600%, decimals allowed
+7. **e075750** — Fix: reset button now restores all config to defaults
+   - Bug: reset only restored presets list, not mode or percentage step
+   - Fix: now resets mode to presets, step to 10%, and refreshes UI
+   - Version bumped to 1.0.1
 
-### Quick-access bar
-- Dynamic row of 1–7 buttons at top of popup
-- Shows presets that have quick-access enabled via checkbox in the preset editor
-- Maximum of 7 quick-access presets; checkboxes disable at the limit
-- Defaults: 50%, 75%, 100%, 125%, 150%, 200%, 300%
-- Clicking a quick button sets speed directly without affecting increment/decrement mode
+## Releases
 
-### Data model change
-- Presets changed from flat `number[]` to `{ speed: number, quick: boolean }[]`
-- Includes migration for legacy flat array format from storage
+- **v1.0.0** — Initial release (all features)
+- **v1.0.1** — Bug fix: reset button restores all config to defaults
 
-### Other additions
-- `notes/` directory for project notes (excluded from packaged extension)
-- `package.sh` script to build distributable zip
-- `.gitignore` for build artifacts
+## Architecture
 
-## Infrastructure
-- Body width increased from 220px to 260px to accommodate config panel
+- Body width: 260px to accommodate config panel
 - All config persisted globally via `chrome.storage.local`
 - Settings save immediately on change
+- Quick-access defaults: 50%, 75%, 100%, 125%, 150%, 200%, 300% (max 7)
+- 100% preset is undeletable; its quick-access checkbox is always checked
+- Preset validation: no duplicates, clamped to 10%–1600%, decimals allowed
