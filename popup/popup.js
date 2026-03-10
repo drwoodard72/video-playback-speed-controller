@@ -417,6 +417,9 @@
 
   btnPresetReset.addEventListener('click', () => {
     presets = DEFAULT_PRESETS.map(p => ({ ...p }));
+    mode = 'presets';
+    pctStep = 10;
+    applyModeUI();
     renderPresets();
     saveConfig();
   });

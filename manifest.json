@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Rush's Video Playback Speed Controller",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Control playback speed of all video players on the current tab.",
   "permissions": [
     "activeTab",
